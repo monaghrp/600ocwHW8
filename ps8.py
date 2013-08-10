@@ -471,47 +471,146 @@ def simulationDelayedTreatment(numViruses, maxPop, maxBirthProb, clearProb, resi
 # PROBLEM 4
 #
 
-def simulationTwoDrugsDelayedTreatment():
+def run2DrugSimulation (numViruses, maxPop, maxBirthProb, clearProb, resistances, mutProb, numStepsBeforeDrugApplied, totalNumSteps):
+    """ Helper function for doing one actual simulation run with drug applied """
+
+    assert numStepsBeforeDrugApplied <= totalNumSteps
+    
+    viruses = []
+
+    for i in xrange(0, numViruses):
+        viruses.append(ResistantVirus(maxBirthProb, clearProb, resistances,mutProb))
+
+    patient = Patient(viruses, maxPop)
+
+    numVirusesEachStep = []
+    numResistantVirusesEachStep = []
+    for i in xrange(0, totalNumSteps):
+        if i == 150:
+            patient.addPrescription("guttagonol")
+        if i == (numStepsBeforeDrugApplied+150):
+            patient.addPrescription("grimpex")
+        numVirusesEachStep.append(patient.update())
+        numResistantVirusesEachStep.append(patient.getResistPop(["guttagonol"]))
+    
+    return (numVirusesEachStep, numResistantVirusesEachStep)
+
+def simulationWith2DrugDelayHist(numViruses, maxPop, maxBirthProb, clearProb, resistances, mutProb, numStepsBeforeDrugApplied, totalNumSteps,numTrials):
 
     """
-    Runs simulations and make histograms for problem 6.
-    Runs multiple simulations to show the relationship between administration
-    of multiple drugs and patient outcome.
-   
-    Histograms of final total virus populations are displayed for lag times of
-    150, 75, 0 timesteps between adding drugs (followed by an additional 150
-    timesteps of simulation).
-    """
 
+    Runs simulations and plots graphs for problem 4.
+    Instantiates a patient, runs a simulation for 150 timesteps, adds
+    guttagonol, and runs the simulation for an additional 150 timesteps.
+    total virus population vs. time and guttagonol-resistant virus population
+    vs. time are plotted
+    """
     # TODO
-    totalViruses = None
-    resistantViruses = None
-
+    virii=[]
     for i in xrange(0, numTrials):
         print 'iteration: ' + str(i)
         #print "running trial", i
-        (total, resistant) = runDrugSimulation(numViruses, maxPop, maxBirthProb,clearProb, resistances, mutProb,numStepsBeforeDrugApplied, totalNumSteps)
-        if totalViruses == None:
-            totalViruses = total
-            resistantViruses = resistant
-        else:
-            for j in xrange(0, len(total)):
-                totalViruses[j] += total[j]
-                resistantViruses[j] += resistant[j]
+        (total, resistant) = run2DrugSimulation(numViruses, maxPop, maxBirthProb,clearProb, resistances, mutProb,numStepsBeforeDrugApplied, totalNumSteps)
+        virii.append(total[totalNumSteps-1])
     
-    for i in xrange(0, len(totalViruses)):
-        totalViruses[i] /= float(numTrials)
-        resistantViruses[i] /= float(numTrials)
+    return virii
 
-    pylab.plot(xrange(0, len(totalViruses)), totalViruses, label = "Total")
-    pylab.plot(xrange(0, len(totalViruses)), resistantViruses,label = "ResistantVirus")
-    pylab.title("ResistantVirus simulation")
-    pylab.xlabel("time step")
+def simulation2DrugDelayedTreatment():
+
+    """
+    Runs simulations and make histograms for problem 5.
+    Runs multiple simulations to show the relationship between delayed treatment
+    and patient outcome.
+    Histograms of final total virus populations are displayed for delays of 300,
+    150, 75, 0 timesteps (followed by an additional 150 timesteps of
+    simulation).    
+    """
+    numTrials=30
+    numViruses=100
+    maxPop=1000
+    maxBirthProb=0.1
+    clearProb=0.05
+    resistances={'guttagonol':False, 'grimpex':False}
+    mutProb=0.005
+    # TODO
+    v1_stddev=0
+    v2_stddev=0
+    v3_stddev=0
+    v4_stddev=0
+    v1=simulationWith2DrugDelayHist(numViruses, maxPop, maxBirthProb, clearProb, resistances, mutProb, 300,600,numTrials)
+    v2=simulationWith2DrugDelayHist(numViruses, maxPop, maxBirthProb, clearProb, resistances, mutProb, 150,450,numTrials)
+    v3=simulationWith2DrugDelayHist(numViruses, maxPop, maxBirthProb, clearProb, resistances, mutProb, 75,225,numTrials)
+    v4=simulationWith2DrugDelayHist(numViruses, maxPop, maxBirthProb, clearProb, resistances, mutProb, 0,300,numTrials)
+    v1_mean=float(sum(v1))/float(len(v1))
+    v2_mean=float(sum(v2))/float(len(v2))
+    v3_mean=float(sum(v3))/float(len(v3))
+    v4_mean=float(sum(v4))/float(len(v4))
+    for i in xrange(0,len(v1)):
+        v1_stddev+=(v1_mean-v1[i])**2
+        v2_stddev+=(v2_mean-v2[i])**2
+        v3_stddev+=(v3_mean-v3[i])**2
+        v4_stddev+=(v4_mean-v4[i])**2
+    v1_stddev=(v1_stddev/float(len(v1)))**.5
+    v2_stddev=(v2_stddev/float(len(v2)))**.5
+    v3_stddev=(v3_stddev/float(len(v3)))**.5
+    v4_stddev=(v4_stddev/float(len(v4)))**.5
+    if v1_mean>(1e-6):
+        v1_cov=v1_stddev/v1_mean
+    else:
+        v1_cov=None
+    if v2_mean>(1e-6):
+        v2_cov=v2_stddev/v2_mean
+    else:
+        v2_cov=None
+    if v3_mean>(1e-6):
+        v3_cov=v3_stddev/v3_mean
+    else:
+        v3_cov=None
+    if v4_mean>(1e-6):
+        v4_cov=v4_stddev/v4_mean
+    else:
+        v4_cov=None
+    
+    print '0 delay mean: ' + str(v4_mean)
+    print '0 delay stddev: ' + str(v4_stddev)
+    print '0 delay cov: ' + str(v4_cov)
+    print '75 delay mean: ' + str(v3_mean)
+    print '75 delay stddev: ' + str(v3_stddev)
+    print '75 delay cov: ' + str(v3_cov)
+    print '150 delay mean: ' + str(v2_mean)
+    print '150 delay stddev: ' + str(v2_stddev)
+    print '150 delay cov: ' + str(v2_cov)
+    print '300 delay mean: ' + str(v1_mean)
+    print '300 delay stddev: ' + str(v1_stddev)
+    print '300 delay cov: ' + str(v1_cov)
+   
+    
+    
+    pylab.subplot(1,4,1)
+    pylab.hist(v1,12,(0,600))
+    pylab.title("Delay 300")
+    pylab.xlabel("final virus count")
     pylab.ylabel("# viruses")
-    pylab.legend(loc = "best")
+    ##pylab.legend(loc = "best")
+    pylab.subplot(1,4,2)
+    pylab.hist(v2,12,(0,600))
+    pylab.title("Delay 150")
+    pylab.xlabel("final virus count")
+    pylab.ylabel("# viruses")
+    ##pylab.legend(loc = "best")
+    pylab.subplot(1,4,3)
+    pylab.hist(v3,12,(0,600))
+    pylab.title("Delay 75")
+    pylab.xlabel("final virus count")
+    pylab.ylabel("# viruses")
+    ##pylab.legend(loc = "best")
+    pylab.subplot(1,4,4)
+    pylab.hist(v4,12,(0,600))
+    pylab.title("Delay 0")
+    pylab.xlabel("final virus count")
+    pylab.ylabel("# viruses")
+    ##pylab.legend(loc = "best")
     pylab.show()
-
-
 #
 # PROBLEM 5
 #    
@@ -528,6 +627,59 @@ def simulationTwoDrugsVirusPopulations():
 
     """
     #TODO
+def simulationTwoDrugsDelayedTreatment(numStepsBeforeDrugApplied):
+
+    """
+    Runs simulations and make histograms for problem 6.
+    Runs multiple simulations to show the relationship between administration
+    of multiple drugs and patient outcome.
+   
+    Histograms of final total virus populations are displayed for lag times of
+    150, 75, 0 timesteps between adding drugs (followed by an additional 150
+    timesteps of simulation).
+    """
+    numTrials=30
+    numViruses=100
+    maxPop=1000
+    maxBirthProb=0.1
+    clearProb=0.05
+    resistances={'guttagonol':False, 'grimpex':False}
+    mutProb=0.005
+    totalNumSteps=numStepsBeforeDrugApplied+300
+    # TODO
+    totalViruses = None
+    resistantViruses = None
+
+    for i in xrange(0, numTrials):
+        print 'iteration: ' + str(i)
+        #print "running trial", i
+        (total, resistant) = run2DrugSimulation(numViruses, maxPop, maxBirthProb,clearProb, resistances, mutProb,numStepsBeforeDrugApplied, totalNumSteps)
+        
+        if totalViruses == None:
+            totalViruses = total
+            resistantViruses = resistant
+        else:
+            for j in xrange(0, len(total)):
+                totalViruses[j] += total[j]
+                resistantViruses[j] += resistant[j]
+    print 'len totalVirus: ' + str(len(totalViruses))
+    for i in xrange(0, len(totalViruses)):
+        totalViruses[i] /= float(numTrials)
+        resistantViruses[i] /= float(numTrials)
+
+    pylab.plot(xrange(0, len(totalViruses)), totalViruses, label = "Total")
+    pylab.plot(xrange(0, len(totalViruses)), resistantViruses,label = "ResistantVirus")
+    pylab.title("ResistantVirus simulation")
+    pylab.xlabel("time step")
+    pylab.ylabel("# viruses")
+    pylab.legend(loc = "best")
+    pylab.show()    
+
+def simulationTwoDrugsDelayedTreatmentBatch():
+    simulationTwoDrugsDelayedTreatment(300)
+    simulationTwoDrugsDelayedTreatment(150)
+    simulationTwoDrugsDelayedTreatment(75)
+    simulationTwoDrugsDelayedTreatment(0)
 
 
 
