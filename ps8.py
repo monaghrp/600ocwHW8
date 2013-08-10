@@ -484,16 +484,20 @@ def run2DrugSimulation (numViruses, maxPop, maxBirthProb, clearProb, resistances
     patient = Patient(viruses, maxPop)
 
     numVirusesEachStep = []
-    numResistantVirusesEachStep = []
+    guttagonolNumResistantVirusesEachStep = []
+    grimpexNumResistantVirusesEachStep = []
+    allNumResistantVirusesEachStep = []
     for i in xrange(0, totalNumSteps):
         if i == 150:
             patient.addPrescription("guttagonol")
         if i == (numStepsBeforeDrugApplied+150):
             patient.addPrescription("grimpex")
         numVirusesEachStep.append(patient.update())
-        numResistantVirusesEachStep.append(patient.getResistPop(["guttagonol"]))
+        guttagonolNumResistantVirusesEachStep.append(patient.getResistPop(["guttagonol"]))
+        grimpexNumResistantVirusesEachStep.append(patient.getResistPop(["grimpex"]))
+        allNumResistantVirusesEachStep.append(patient.getResistPop(["guttagonol","grimpex"]))
     
-    return (numVirusesEachStep, numResistantVirusesEachStep)
+    return (numVirusesEachStep, guttagonolNumResistantVirusesEachStep,grimpexNumResistantVirusesEachStep,allNumResistantVirusesEachStep)
 
 def simulationWith2DrugDelayHist(numViruses, maxPop, maxBirthProb, clearProb, resistances, mutProb, numStepsBeforeDrugApplied, totalNumSteps,numTrials):
 
@@ -510,7 +514,7 @@ def simulationWith2DrugDelayHist(numViruses, maxPop, maxBirthProb, clearProb, re
     for i in xrange(0, numTrials):
         print 'iteration: ' + str(i)
         #print "running trial", i
-        (total, resistant) = run2DrugSimulation(numViruses, maxPop, maxBirthProb,clearProb, resistances, mutProb,numStepsBeforeDrugApplied, totalNumSteps)
+        (total, gur,grr,tr) = run2DrugSimulation(numViruses, maxPop, maxBirthProb,clearProb, resistances, mutProb,numStepsBeforeDrugApplied, totalNumSteps)
         virii.append(total[totalNumSteps-1])
     
     return virii
@@ -648,27 +652,37 @@ def simulationTwoDrugsDelayedTreatment(numStepsBeforeDrugApplied):
     totalNumSteps=numStepsBeforeDrugApplied+300
     # TODO
     totalViruses = None
-    resistantViruses = None
+    resistantGuttangonol = None
+    resistantGrimpex = None
+    resistantAll = None
 
     for i in xrange(0, numTrials):
         print 'iteration: ' + str(i)
         #print "running trial", i
-        (total, resistant) = run2DrugSimulation(numViruses, maxPop, maxBirthProb,clearProb, resistances, mutProb,numStepsBeforeDrugApplied, totalNumSteps)
+        (total, gur,grr,ar) = run2DrugSimulation(numViruses, maxPop, maxBirthProb,clearProb, resistances, mutProb,numStepsBeforeDrugApplied, totalNumSteps)
         
         if totalViruses == None:
             totalViruses = total
-            resistantViruses = resistant
+            resistantGuttangonol = gur
+            resistantGrimpex = grr
+            resistantAll = ar
         else:
             for j in xrange(0, len(total)):
                 totalViruses[j] += total[j]
-                resistantViruses[j] += resistant[j]
+                resistantGuttangonol[j] += gur[j]
+                resistantGrimpex[j] += grr[j]
+                resistantAll[j] += ar[j]
     print 'len totalVirus: ' + str(len(totalViruses))
     for i in xrange(0, len(totalViruses)):
         totalViruses[i] /= float(numTrials)
-        resistantViruses[i] /= float(numTrials)
+        resistantGuttangonol[i] /= float(numTrials)
+        resistantGrimpex[i] /= float(numTrials)
+        resistantAll[i] /= float(numTrials)
 
     pylab.plot(xrange(0, len(totalViruses)), totalViruses, label = "Total")
-    pylab.plot(xrange(0, len(totalViruses)), resistantViruses,label = "ResistantVirus")
+    pylab.plot(xrange(0, len(totalViruses)), resistantGuttangonol,label = "ResistantGuttangonol")
+    pylab.plot(xrange(0, len(totalViruses)), resistantGrimpex,label = "ResistantGrimpex")
+    pylab.plot(xrange(0, len(totalViruses)), resistantAll,label = "ResistantAll")
     pylab.title("ResistantVirus simulation")
     pylab.xlabel("time step")
     pylab.ylabel("# viruses")
